@@ -10,12 +10,14 @@ namespace MethodInvoker
     {
         public static void CallMethod(List<dynamic> @params, string methodName, Type classType)
         {
-            MethodInfo methodInfo = GetCorrectOverloadedMethod(classType.GetMethods(), methodName, @params);
-            if (methodInfo == null)
-            {
-                throw new Exception("No method or method overload found");
-            }
+            MethodInfo methodInfo = GetCorrectMethod(classType.GetMethods(), methodName, @params);
+            object[] invocationParameters = ParametersAsArrayOfObject(@params, methodInfo);
+            var classInstance = Activator.CreateInstance(classType);
+            methodInfo.Invoke(classInstance, invocationParameters);
+        }
 
+        private static object[] ParametersAsArrayOfObject(List<dynamic> @params, MethodInfo methodInfo)
+        {
             List<object> convertedParams = new List<object>();
             var methodParameters = methodInfo.GetParameters();
 
@@ -24,12 +26,10 @@ namespace MethodInvoker
                 convertedParams.Add(Convert.ChangeType(@params[i], methodParameters[i].ParameterType));
             }
 
-            var obj = Activator.CreateInstance(classType);
-
-            methodInfo.Invoke(obj, convertedParams.ToArray());
+            return convertedParams.ToArray();
         }
 
-        private static MethodInfo GetCorrectOverloadedMethod(MethodInfo[] methods, string methodName, List<dynamic> passedParameters)
+        private static MethodInfo GetCorrectMethod(MethodInfo[] methods, string methodName, List<dynamic> passedParameters)
         {
             var methodsMatchingProvidedNumberOfArguments = methods.Where(method => method.GetParameters().Length == passedParameters.Count && method.Name == methodName).ToList();
             foreach (var method in methodsMatchingProvidedNumberOfArguments)
@@ -43,7 +43,7 @@ namespace MethodInvoker
                 }
             }
 
-            return null;
+            throw new Exception("No method or method overload found");
         }
     }
 }
